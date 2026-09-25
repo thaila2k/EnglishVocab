@@ -250,7 +250,7 @@ VOCAB.add({ id: "t-economy", group: "toeic", en: "Economy & Industry", vi: "Kinh
   ["prosperity", "n.", "/prɑːˈsperəti/", "sự thịnh vượng", "Trade has brought prosperity to the region.", "Thương mại đã mang lại sự thịnh vượng cho khu vực.", "C1"],
   ["prosperous", "adj.", "/ˈprɑːspərəs/", "thịnh vượng", "Da Nang is a prosperous city.", "Đà Nẵng là một thành phố thịnh vượng.", "C1"],
   ["standard of living", "n.", "/ˌstændərd əv ˈlɪvɪŋ/", "mức sống", "The standard of living has improved a lot.", "Mức sống đã được cải thiện nhiều.", "B2"],
-  ["gap", "n.", "/ɡæp/", "khoảng cách", "The gap between rich and poor is growing.", "Khoảng cách giàu nghèo đang tăng lên.", "B1"],
+  ["gap", "n.", "/ɡæp/", "khoảng cách, sự chênh lệch", "The gap between rich and poor is growing.", "Khoảng cách giàu nghèo đang tăng lên.", "B1"],
   ["monopoly", "n.", "/məˈnɑːpəli/", "sự độc quyền", "The company has a monopoly on electricity.", "Công ty độc quyền về điện.", "C1"],
   ["supply and demand", "n.", "/səˌplaɪ ən dɪˈmænd/", "cung và cầu", "Prices depend on supply and demand.", "Giá cả phụ thuộc vào cung và cầu.", "B2"],
   ["exporter", "n.", "/ɪkˈspɔːrtər/", "nước (công ty) xuất khẩu", "Vietnam is the world's second-largest coffee exporter.", "Việt Nam là nước xuất khẩu cà phê lớn thứ hai thế giới.", "B2"],
