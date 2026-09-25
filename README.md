@@ -19,7 +19,9 @@ Website học từ vựng tiếng Anh cho người Việt. Chạy hoàn toàn tr
 - Giao diện sáng/tối theo hệ điều hành, dùng tốt trên điện thoại.
 - Tiến độ lưu trong `localStorage` của trình duyệt.
 
-Bộ từ có sẵn gồm **1.040 từ** thuộc 26 chủ đề (mỗi chủ đề 40 từ):
+Có sẵn **3.040 từ** chia làm hai bộ. Chọn bộ ở đầu màn hình *Hôm nay* (nút **Cơ bản** / **TOEIC**); mỗi bộ có nút học hoặc luyện tập cả bộ, và trong các danh sách chủ đề các chủ đề được xếp theo bộ.
+
+### Bộ Cơ bản: 1.040 từ, 26 chủ đề (mỗi chủ đề 40 từ)
 
 | Nhóm | Chủ đề |
 |---|---|
@@ -33,7 +35,25 @@ Bộ từ có sẵn gồm **1.040 từ** thuộc 26 chủ đề (mỗi chủ đ�
 | Xã hội | Giải trí & truyền thông, Xã hội, Pháp luật & tội phạm |
 | Từ vựng cốt lõi | Động từ thông dụng, Tính từ thông dụng, Cụm động từ, Từ học thuật (IELTS) |
 
-Mỗi từ có từ loại, phiên âm IPA (giọng Anh-Mỹ), nghĩa tiếng Việt, câu ví dụ kèm bản dịch và cấp độ CEFR. Theo trình độ: 101 từ A1, 287 từ A2, 467 từ B1, 165 từ B2 và 20 từ C1.
+Theo trình độ: 101 từ A1, 287 từ A2, 467 từ B1, 165 từ B2 và 20 từ C1.
+
+### Bộ TOEIC: 2.000 từ, 40 chủ đề (mỗi chủ đề 50 từ)
+
+Từ vựng công sở và kinh doanh theo các bối cảnh hay gặp trong đề TOEIC, hướng tới mục tiêu 785+ (khoảng trình độ B2).
+
+| Nhóm | Chủ đề |
+|---|---|
+| Nhân sự & văn phòng | Công việc văn phòng, Tuyển dụng, Nhân sự & phúc lợi, Quản lý & hiệu suất, Đào tạo & phát triển |
+| Giao tiếp & kinh doanh | Cuộc họp & hội nghị, Thư từ & liên lạc, Lịch hẹn & kế hoạch, Tiếp thị & quảng cáo, Bán hàng & đàm phán, Chăm sóc khách hàng, Bán lẻ & cửa hàng |
+| Vận hành | Mua hàng & đơn đặt hàng, Vận chuyển & kho vận, Sản xuất, Chất lượng & an toàn, Hợp đồng & pháp lý |
+| Tài chính | Tài chính & kế toán, Ngân hàng & đầu tư, Ngân sách & chi phí, Phát triển doanh nghiệp, Kinh tế & các ngành |
+| Dịch vụ & đi lại | Đi công tác, Khách sạn & lưu trú, Ăn uống & tiệc, Sự kiện & giải trí, Đi lại & giao thông, Bất động sản |
+| Các ngành | Xây dựng & bảo trì, Công nghệ thông tin & thiết bị, Y tế & bảo hiểm, Nghiên cứu & phát triển, Truyền thông & xuất bản, Môi trường & năng lượng |
+| Từ loại (Part 5 & 6) | Động từ TOEIC, Danh từ TOEIC, Tính từ TOEIC, Trạng từ TOEIC, Giới từ & từ nối, Cụm từ cố định |
+
+Theo trình độ: 16 từ A1, 144 từ A2, 517 từ B1, 799 từ B2 và 524 từ C1.
+
+Mỗi từ có từ loại, phiên âm IPA (giọng Anh-Mỹ), nghĩa tiếng Việt, câu ví dụ kèm bản dịch và cấp độ CEFR. Phiên âm, nghĩa và cấp độ do người viết soạn, chưa đối chiếu từng mục với từ điển.
 
 ## Chạy thử
 
@@ -59,7 +79,7 @@ rồi mở `http://localhost:8000`.
 index.html      Khung trang và thanh điều hướng
 css/style.css   Giao diện (token màu cho chế độ sáng/tối, responsive)
 js/vocab.js     Kho từ vựng (hàm VOCAB.add để đăng ký chủ đề)
-js/data/*.js    Bộ từ vựng mặc định, chia file theo nhóm chủ đề
+js/data/*.js    Bộ từ vựng mặc định, chia file theo nhóm chủ đề (toeic-*.js là bộ TOEIC)
 js/app.js       Toàn bộ logic: lặp lại ngắt quãng, thẻ từ, bài kiểm tra, sổ từ
 ```
 
@@ -71,4 +91,4 @@ Mở file phù hợp trong `js/data/`, thêm một dòng vào chủ đề theo �
 ["word", "loại từ", "/phiên âm/", "nghĩa tiếng Việt", "Câu ví dụ.", "Dịch câu ví dụ.", "B1"]
 ```
 
-Muốn thêm chủ đề mới thì gọi thêm một lần `VOCAB.add({ id, en, vi }, [...])`. Nếu tạo file mới, nhớ thêm thẻ `<script>` tương ứng vào `index.html` (trước `js/app.js`). Mỗi từ chỉ được xuất hiện một lần trong toàn bộ kho; từ trùng sẽ bị bỏ qua và báo trong console.
+Muốn thêm chủ đề mới thì gọi thêm một lần `VOCAB.add({ id, en, vi }, [...])`; thêm `group: "toeic"` nếu chủ đề thuộc bộ TOEIC (mặc định là bộ Cơ bản). Nếu tạo file mới, nhớ thêm thẻ `<script>` tương ứng vào `index.html` (trước `js/app.js`). Mỗi từ chỉ được xuất hiện một lần trong toàn bộ kho; từ trùng sẽ bị bỏ qua và báo trong console.
