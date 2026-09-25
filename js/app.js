@@ -3,6 +3,7 @@
 
   const BASE_TOPICS = window.VOCAB.topics;
   const BASE_WORDS = window.VOCAB.words;
+  const GROUPS = window.VOCAB.groups || [{ id: 'basic', name: 'Cơ bản', desc: '' }];
   const STORE_KEY = 'sotu.v1';
   const MIN = 60 * 1000;
   const HOUR = 60 * MIN;
@@ -16,7 +17,7 @@
       days: {},      // 'YYYY-MM-DD' -> số lượt học
       newDays: {},   // 'YYYY-MM-DD' -> số từ mới đã học
       custom: [],    // từ người dùng tự thêm
-      settings: { accent: 'en-US', rate: 0.9, newPerDay: 10, goal: 20, autoSpeak: true }
+      settings: { accent: 'en-US', rate: 0.9, newPerDay: 10, goal: 20, autoSpeak: true, topicGroup: 'toeic' }
     };
   }
 
@@ -93,7 +94,7 @@
   };
 
   // ---------- Từ vựng ----------
-  const MY_TOPIC = { id: 'mine', en: 'My Words', vi: 'Từ của tôi' };
+  const MY_TOPIC = { id: 'mine', en: 'My Words', vi: 'Từ của tôi', group: 'basic' };
   let wordIndex = null;
 
   const allWords = () => BASE_WORDS.concat(data.custom);
@@ -104,24 +105,41 @@
     return wordIndex.get(id);
   }
 
+  // Chủ đề đặc biệt: 'all', 'starred', 'group:<id>' (cả một bộ, ví dụ group:toeic).
   function wordsIn(topic) {
     if (topic === 'all') return allWords();
     if (topic === 'starred') return allWords().filter((w) => data.stars[w.id]);
+    if (topic.indexOf('group:') === 0) {
+      const ids = new Set(topicList().filter((t) => t.group === topic.slice(6)).map((t) => t.id));
+      return allWords().filter((w) => ids.has(w.topic));
+    }
     return allWords().filter((w) => w.topic === topic);
+  }
+
+  function groupOf(id) {
+    return GROUPS.find((g) => g.id === id) || GROUPS[0];
   }
 
   function topicName(id) {
     if (id === 'all') return 'Tất cả chủ đề';
     if (id === 'starred') return 'Từ đã đánh dấu sao';
+    if (id.indexOf('group:') === 0) return 'Toàn bộ ' + groupOf(id.slice(6)).name;
     const t = topicList().find((x) => x.id === id);
     return t ? t.vi : id;
   }
 
   function topicOptions(selected) {
-    const opts = [['all', 'Tất cả chủ đề']]
-      .concat(topicList().map((t) => [t.id, t.vi + ' · ' + t.en]))
-      .concat([['starred', 'Từ đã đánh dấu sao']]);
-    return opts.map(([v, label]) => `<option value="${esc(v)}"${v === selected ? ' selected' : ''}>${esc(label)}</option>`).join('');
+    const opt = (v, label) => `<option value="${esc(v)}"${v === selected ? ' selected' : ''}>${esc(label)}</option>`;
+    let html = opt('all', 'Tất cả chủ đề');
+    for (const g of GROUPS) {
+      const ts = topicList().filter((t) => t.group === g.id);
+      if (!ts.length) continue;
+      html += `<optgroup label="${esc('Bộ ' + g.name)}">` +
+        opt('group:' + g.id, 'Toàn bộ ' + g.name) +
+        ts.map((t) => opt(t.id, t.vi + ' · ' + t.en)).join('') +
+        '</optgroup>';
+    }
+    return html + opt('starred', 'Từ đã đánh dấu sao');
   }
 
   const STATUS_LABEL = { new: 'Chưa học', learning: 'Đang học', known: 'Đã nhớ' };
@@ -334,6 +352,10 @@
       : 'Bạn đã học xong phần của hôm nay. Muốn luyện thêm thì làm một bài kiểm tra nhanh nhé.';
 
     const w = wordOfDay();
+    const hasTopics = (g) => topicList().some((t) => t.group === g.id);
+    let group = groupOf(data.settings.topicGroup);
+    if (!hasTopics(group)) group = GROUPS.find(hasTopics) || GROUPS[0];
+    const groupTopics = topicList().filter((t) => t.group === group.id);
     const goalPct = Math.min(100, Math.round((done / goal) * 100));
 
     $('#view-today').innerHTML = `
@@ -401,14 +423,29 @@
         </div>
 
         <div class="section-head">
-          <h2>Chủ đề</h2>
+          <div class="hello">
+            <h2>Chủ đề</h2>
+            <p class="lede">${esc(group.desc)}</p>
+          </div>
+          <div class="chips" role="group" aria-label="Chọn bộ từ">
+            ${GROUPS.map((g) => {
+              const n = wordsIn('group:' + g.id).length;
+              return n ? `<button type="button" class="chip" data-action="group" data-group="${g.id}" aria-pressed="${g.id === group.id}">Bộ ${esc(g.name)}<span class="n">${n} từ</span></button>` : '';
+            }).join('')}
+          </div>
+        </div>
+        <div class="group-bar">
           <div class="legend" aria-hidden="true">
             <span><i class="sw-known"></i>Đã nhớ</span>
             <span><i class="sw-learning"></i>Đang học</span>
             <span><i class="sw-new"></i>Chưa học</span>
           </div>
+          <div class="topic-actions">
+            <button type="button" class="btn btn-primary btn-sm" data-action="study" data-topic="group:${group.id}">Học cả bộ ${esc(group.name)}</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-action="quiz-topic" data-topic="group:${group.id}">Kiểm tra cả bộ</button>
+          </div>
         </div>
-        <div class="topics">${topicList().map(topicCard).join('')}</div>
+        <div class="topics">${groupTopics.map(topicCard).join('')}</div>
 
         <details class="settings" id="settings"${settingsOpen ? ' open' : ''}>
           <summary>Cài đặt học tập</summary>
@@ -1099,6 +1136,11 @@
         break;
       case 'delete':
         armOrFire('del:' + d.id, () => renderWordList(), () => deleteWord(d.id));
+        break;
+      case 'group':
+        data.settings.topicGroup = d.group;
+        save();
+        rerender();
         break;
       case 'more':
         wf.limit += PAGE;

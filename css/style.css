@@ -327,6 +327,8 @@ mark { background: none; color: inherit; font-weight: 600; text-decoration: unde
 .sw-learning { background: var(--learning); }
 .sw-new { background: var(--new); }
 
+.group-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px 20px; flex-wrap: wrap; margin-top: -12px; }
+.group-bar .topic-actions .btn { flex: none; white-space: nowrap; }
 .topics { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
 .topic {
   background: var(--surface);
