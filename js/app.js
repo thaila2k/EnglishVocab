@@ -4,7 +4,15 @@
   const BASE_TOPICS = window.VOCAB.topics;
   const BASE_WORDS = window.VOCAB.words;
   const GROUPS = window.VOCAB.groups || [{ id: 'basic', name: 'Cơ bản', desc: '' }];
-  const STORE_KEY = 'sotu.v1';
+  // Người học: mỗi người có tiến độ, từ đánh dấu sao, từ tự thêm và cài đặt riêng.
+  // Muốn đổi tên hoặc thêm người thì sửa danh sách này (id không dấu, không trùng; color là 1 hoặc 2).
+  const USERS = [
+    { id: 'ngoc-giau', name: 'Ngọc Giàu', color: 1 },
+    { id: 'thai', name: 'Thái', color: 2 }
+  ];
+  const USER_KEY = 'sotu.user';
+  const LEGACY_KEY = 'sotu.v1'; // dữ liệu từ trước khi có chức năng chọn người học
+  const storeKey = (uid) => 'sotu.v1.' + uid;
   const MIN = 60 * 1000;
   const HOUR = 60 * MIN;
   const DAY = 24 * HOUR;
@@ -21,28 +29,59 @@
     };
   }
 
-  function load() {
+  function readJSON(key) {
     try {
-      const raw = localStorage.getItem(STORE_KEY);
+      const raw = localStorage.getItem(key);
       return raw ? JSON.parse(raw) : null;
     } catch (e) {
       return null;
     }
   }
 
-  const data = Object.assign(defaults(), load() || {});
-  data.settings = Object.assign(defaults().settings, data.settings || {});
-  for (const key of ['srs', 'stars', 'days', 'newDays']) {
-    if (!data[key] || typeof data[key] !== 'object') data[key] = {};
+  function writeJSON(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      return false; // Trình duyệt chặn bộ nhớ: dữ liệu chỉ giữ trong phiên này.
+    }
   }
-  if (!Array.isArray(data.custom)) data.custom = [];
+
+  function normalize(d) {
+    const out = Object.assign(defaults(), d || {});
+    out.settings = Object.assign(defaults().settings, out.settings || {});
+    for (const key of ['srs', 'stars', 'days', 'newDays']) {
+      if (!out[key] || typeof out[key] !== 'object') out[key] = {};
+    }
+    if (!Array.isArray(out.custom)) out.custom = [];
+    return out;
+  }
+
+  // Bản sao trong bộ nhớ để đổi qua lại giữa các người học không mất tiến độ khi localStorage bị chặn.
+  const memory = {};
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+
+  // Đọc dữ liệu của một người học mà không thay đổi gì (dùng cho màn hình chọn người học).
+  function peekUser(uid) {
+    const saved = readJSON(storeKey(uid));
+    return normalize(saved || (memory[uid] ? clone(memory[uid]) : null));
+  }
+
+  function loadUser(uid) {
+    if (readJSON(storeKey(uid)) || memory[uid]) return peekUser(uid);
+    // Tiến độ cũ trên máy (trước khi có chức năng chọn người học) thuộc về người được chọn đầu tiên.
+    const legacy = readJSON(LEGACY_KEY);
+    if (legacy && writeJSON(storeKey(uid), legacy)) {
+      try { localStorage.removeItem(LEGACY_KEY); } catch (e) { /* bỏ qua */ }
+    }
+    return normalize(legacy);
+  }
+
+  let user = USERS.find((u) => u.id === readJSON(USER_KEY)) || null;
+  const data = user ? loadUser(user.id) : normalize(null);
 
   function save() {
-    try {
-      localStorage.setItem(STORE_KEY, JSON.stringify(data));
-    } catch (e) {
-      // Trình duyệt chặn bộ nhớ: tiến độ chỉ giữ trong phiên này.
-    }
+    if (user) writeJSON(storeKey(user.id), data);
   }
 
   // ---------- Tiện ích ----------
@@ -199,12 +238,13 @@
     if (data.days[k] === data.settings.goal) toast('Bạn đã đạt mục tiêu hôm nay. Giỏi lắm!');
   }
 
-  function streak() {
+  function streak(days) {
+    days = days || data.days;
     const d = new Date();
     d.setHours(12, 0, 0, 0);
-    if (!data.days[dayKey(d.getTime())]) d.setDate(d.getDate() - 1);
+    if (!days[dayKey(d.getTime())]) d.setDate(d.getDate() - 1);
     let s = 0;
-    while (data.days[dayKey(d.getTime())]) {
+    while (days[dayKey(d.getTime())]) {
       s++;
       d.setDate(d.getDate() - 1);
     }
@@ -292,19 +332,21 @@
   }
 
   // ---------- Điều hướng ----------
-  const VIEWS = ['today', 'learn', 'quiz', 'words'];
+  const VIEWS = ['today', 'learn', 'quiz', 'words', 'who'];
   let current = 'today';
   const RENDER = {};
 
   function show(view, opts) {
     opts = opts || {};
     if (VIEWS.indexOf(view) === -1) view = 'today';
+    if (!user) view = 'who';
     current = view;
     for (const v of VIEWS) $('#view-' + v).hidden = v !== view;
     document.querySelectorAll('.tab').forEach((t) => {
       if (t.dataset.view === view) t.setAttribute('aria-current', 'page');
       else t.removeAttribute('aria-current');
     });
+    renderTopbar();
     if (view === 'learn' && (!session || session.i >= session.queue.length) && !opts.keepSession) buildSession(learnTopic);
     RENDER[view](opts);
     if (!opts.keepScroll) window.scrollTo(0, 0);
@@ -340,7 +382,7 @@
     const st = streak();
     const nextIn = nextDueIn(now);
     const hour = new Date().getHours();
-    const greet = hour < 11 ? 'Chào buổi sáng!' : hour < 14 ? 'Chào buổi trưa!' : hour < 18 ? 'Chào buổi chiều!' : 'Chào buổi tối!';
+    const greet = (hour < 11 ? 'Chào buổi sáng' : hour < 14 ? 'Chào buổi trưa' : hour < 18 ? 'Chào buổi chiều' : 'Chào buổi tối') + ', ' + user.name + '!';
     let dateStr = '';
     try {
       dateStr = new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
@@ -362,7 +404,7 @@
       <div class="stack">
         <div class="hello">
           <p class="eyebrow">${esc(dateStr)}</p>
-          <h1 id="today-title">${greet}</h1>
+          <h1 id="today-title">${esc(greet)}</h1>
           <p class="lede">${lede}</p>
         </div>
 
@@ -467,7 +509,7 @@
             </label>
             <label class="check"><input id="set-auto" type="checkbox"${data.settings.autoSpeak ? ' checked' : ''}> Tự đọc từ khi hiện thẻ</label>
             <div class="field"><span>Dữ liệu học</span>
-              <button type="button" id="reset-btn" class="btn ${armed.key === 'reset' ? 'btn-danger' : 'btn-ghost'}" data-action="reset">${armed.key === 'reset' ? 'Bấm lần nữa để xoá' : 'Xoá toàn bộ tiến độ'}</button>
+              <button type="button" id="reset-btn" class="btn ${armed.key === 'reset' ? 'btn-danger' : 'btn-ghost'}" data-action="reset">${armed.key === 'reset' ? 'Bấm lần nữa để xoá' : 'Xoá tiến độ của ' + esc(user.name)}</button>
             </div>
           </div>
         </details>
@@ -1076,6 +1118,92 @@
   }
 
   // =====================================================================
+  // NGƯỜI HỌC
+  // =====================================================================
+  const initials = (name) => name.split(/\s+/).map((p) => p.charAt(0)).join('').slice(0, 2).toUpperCase();
+  const avatar = (u, big) => `<span class="avatar avatar-${u.color || 1}${big ? ' lg' : ''}" aria-hidden="true">${esc(initials(u.name))}</span>`;
+
+  function renderTopbar() {
+    const b = $('#user-btn');
+    $('.tabs').hidden = !user;
+    b.hidden = !user;
+    if (!user) return;
+    b.innerHTML = avatar(user) + `<span class="user-name">${esc(user.name)}</span>`;
+    b.setAttribute('aria-label', 'Đang học: ' + user.name + '. Bấm để đổi người học');
+    if (current === 'who') b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  }
+
+  function progressOf(d) {
+    const now = Date.now();
+    let known = 0;
+    let learning = 0;
+    let due = 0;
+    for (const id in d.srs) {
+      const c = d.srs[id];
+      if (c.interval >= 7) known++;
+      else learning++;
+      if (c.due <= now) due++;
+    }
+    return { known, learning, due, streak: streak(d.days) };
+  }
+
+  RENDER.who = function () {
+    const legacy = !user && readJSON(LEGACY_KEY) && USERS.every((u) => !readJSON(storeKey(u.id)));
+    const cards = USERS.map((u) => {
+      const mine = user && u.id === user.id;
+      const p = progressOf(mine ? data : peekUser(u.id));
+      const line2 = (p.streak ? 'Chuỗi ' + p.streak + ' ngày' : 'Chưa có chuỗi ngày học') + (p.due ? ' · ' + p.due + ' thẻ cần ôn' : '');
+      return `
+        <button type="button" class="who-card" data-action="pick-user" data-user="${esc(u.id)}"${mine ? ' aria-current="true"' : ''}>
+          ${mine ? '<span class="who-tag">Đang học</span>' : ''}
+          ${avatar(u, true)}
+          <span class="who-name">${esc(u.name)}</span>
+          <span class="who-stats">${p.known} từ đã nhớ · ${p.learning} đang học</span>
+          <span class="who-stats">${line2}</span>
+        </button>`;
+    }).join('');
+    $('#view-who').innerHTML = `
+      <div class="who">
+        <div class="hello">
+          <p class="eyebrow">Người học</p>
+          <h1 id="who-title">${user ? 'Đổi người học' : 'Ai đang học?'}</h1>
+          <p class="lede">Mỗi người có tiến độ, từ đánh dấu sao, từ tự thêm và cài đặt riêng. Dữ liệu được lưu trên trình duyệt của máy này.</p>
+        </div>
+        <div class="who-grid">${cards}</div>
+        ${legacy ? '<p class="who-note">Tiến độ đang có trên máy này sẽ được chuyển cho người bạn chọn đầu tiên.</p>' : ''}
+      </div>`;
+  };
+
+  function switchUser(id) {
+    const next = USERS.find((u) => u.id === id);
+    if (!next) return;
+    if (!user || next.id !== user.id) {
+      if (user) {
+        save();
+        memory[user.id] = clone(data);
+      }
+      const fresh = loadUser(next.id);
+      for (const k of Object.keys(data)) delete data[k];
+      Object.assign(data, fresh);
+      // Bỏ trạng thái đang dở của người học trước.
+      wordIndex = null;
+      session = null;
+      quiz = null;
+      learnTopic = 'all';
+      quizCfg.topic = 'all';
+      Object.assign(wf, { q: '', topic: 'all', level: 'all', status: 'all', adding: false, limit: PAGE });
+      settingsOpen = false;
+      armed.key = null;
+      if (speech.ok) window.speechSynthesis.cancel();
+      toast('Xin chào ' + next.name + '!');
+    }
+    user = next;
+    writeJSON(USER_KEY, user.id);
+    show('today');
+  }
+
+  // =====================================================================
   // Sự kiện
   // =====================================================================
   document.addEventListener('click', (e) => {
@@ -1137,6 +1265,9 @@
       case 'delete':
         armOrFire('del:' + d.id, () => renderWordList(), () => deleteWord(d.id));
         break;
+      case 'pick-user':
+        switchUser(d.user);
+        break;
       case 'group':
         data.settings.topicGroup = d.group;
         save();
@@ -1161,7 +1292,7 @@
           quiz = null;
           save();
           rerender();
-          toast('Đã xoá toàn bộ tiến độ học.');
+          toast('Đã xoá tiến độ học của ' + user.name + '.');
         });
         break;
     }

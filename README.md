@@ -4,6 +4,7 @@ Website học từ vựng tiếng Anh cho người Việt. Chạy hoàn toàn tr
 
 ## Tính năng
 
+- **Người học**: có sẵn hai người học là *Ngọc Giàu* và *Thái*. Mỗi người có tiến độ, từ đánh dấu sao, từ tự thêm và cài đặt riêng. Lần đầu mở trang sẽ hỏi "Ai đang học?"; muốn đổi người thì bấm vào tên ở góc trên bên phải. Muốn đổi tên hoặc thêm người thì sửa danh sách `USERS` ở đầu file `js/app.js`.
 - **Hôm nay**: chuỗi ngày học, số thẻ cần ôn, số từ đã nhớ, mục tiêu mỗi ngày, "Từ của ngày" và tiến độ theo từng chủ đề.
 - **Thẻ từ (flashcards)**: lật thẻ để xem nghĩa, phiên âm IPA và câu ví dụ có dịch. Sau khi lật, tự chấm mức nhớ *Quên / Khó / Nhớ / Dễ*. Thuật toán lặp lại ngắt quãng (dựa trên SM-2) sẽ hẹn ngày ôn lại: từ nhớ tốt quay lại sau nhiều ngày, từ hay quên gặp lại sớm hơn. Từ mới được đưa ra theo thứ tự từ dễ đến khó (A1 trước, C1 sau).
 - **Luyện tập**: 4 kiểu bài kiểm tra
@@ -17,7 +18,7 @@ Website học từ vựng tiếng Anh cho người Việt. Chạy hoàn toàn tr
 - **Phát âm** bằng Web Speech API của trình duyệt, chọn giọng Anh-Mỹ hoặc Anh-Anh và chỉnh tốc độ đọc.
 - **Phím tắt**: `Space` lật thẻ, `1`–`4` chấm mức nhớ hoặc chọn đáp án, `S` nghe lại, `Enter` sang câu tiếp theo.
 - Giao diện sáng/tối theo hệ điều hành, dùng tốt trên điện thoại.
-- Tiến độ lưu trong `localStorage` của trình duyệt.
+- Tiến độ lưu trong `localStorage` của trình duyệt, riêng cho từng người học. Dữ liệu nằm trên từng máy: học trên điện thoại thì tiến độ không tự sang máy tính.
 
 Có sẵn **3.040 từ** chia làm hai bộ. Chọn bộ ở đầu màn hình *Hôm nay* (nút **Cơ bản** / **TOEIC**); mỗi bộ có nút học hoặc luyện tập cả bộ, và trong các danh sách chủ đề các chủ đề được xếp theo bộ.
 
