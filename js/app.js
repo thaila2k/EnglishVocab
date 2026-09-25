@@ -125,6 +125,8 @@
   }
 
   const STATUS_LABEL = { new: 'Chưa học', learning: 'Đang học', known: 'Đã nhớ' };
+  const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+  const levelRank = (w) => (LEVELS.indexOf(w.level) + 1) || 3;
 
   function statusOf(id) {
     const c = data.srs[id];
@@ -485,7 +487,8 @@
       ids = shuffle(studied.length >= 5 ? studied : pool).slice(0, 10).map((w) => w.id);
     } else {
       const due = dueWords(pool, now).slice(0, 60).map((w) => w.id);
-      const fresh = pool.filter((w) => !data.srs[w.id]);
+      // Từ mới đi từ dễ đến khó: A1 trước, C1 sau.
+      const fresh = pool.filter((w) => !data.srs[w.id]).sort((a, b) => levelRank(a) - levelRank(b));
       const nNew = opts.extraNew ? Math.min(10, fresh.length) : Math.min(newLeftToday(), fresh.length);
       ids = opts.extraNew ? fresh.slice(0, nNew).map((w) => w.id) : due.concat(fresh.slice(0, nNew).map((w) => w.id));
     }
@@ -891,7 +894,8 @@
   // =====================================================================
   // SỔ TỪ
   // =====================================================================
-  const wf = { q: '', topic: 'all', status: 'all', adding: false };
+  const PAGE = 100;
+  const wf = { q: '', topic: 'all', level: 'all', status: 'all', adding: false, limit: PAGE };
 
   RENDER.words = function () {
     $('#view-words').innerHTML = `
@@ -928,6 +932,10 @@
         <div class="toolbar">
           <div class="search">${ICON.search}<input id="words-q" class="input" type="search" placeholder="Tìm từ tiếng Anh hoặc nghĩa tiếng Việt" value="${esc(wf.q)}" aria-label="Tìm từ"></div>
           <select id="words-topic" class="select" aria-label="Lọc theo chủ đề">${topicOptions(wf.topic)}</select>
+          <select id="words-level" class="select level-select" aria-label="Lọc theo trình độ">
+            <option value="all">Mọi trình độ</option>
+            ${LEVELS.slice(0, 5).map((l) => `<option value="${l}"${wf.level === l ? ' selected' : ''}>${l}</option>`).join('')}
+          </select>
         </div>
         <div class="chips" id="words-chips" role="group" aria-label="Lọc theo trạng thái"></div>
         <p class="list-count" id="words-count"></p>
@@ -938,7 +946,8 @@
 
   function renderWordList() {
     const q = fold(wf.q.trim());
-    const base = wordsIn(wf.topic).filter((w) => !q || fold(w.word).includes(q) || fold(w.vi).includes(q));
+    const base = wordsIn(wf.topic).filter((w) =>
+      (wf.level === 'all' || w.level === wf.level) && (!q || fold(w.word).includes(q) || fold(w.vi).includes(q)));
     const counts = { all: base.length, new: 0, learning: 0, known: 0, starred: 0 };
     for (const w of base) {
       counts[statusOf(w.id)]++;
@@ -949,8 +958,12 @@
       `<button type="button" class="chip" data-action="chip" data-status="${k}" aria-pressed="${wf.status === k}">${label}<span class="n">${counts[k]}</span></button>`).join('');
 
     const list = base.filter((w) => wf.status === 'all' || (wf.status === 'starred' ? data.stars[w.id] : statusOf(w.id) === wf.status));
-    $('#words-count').textContent = `Đang hiện ${list.length} từ`;
-    $('#words-list').innerHTML = list.length ? list.map(wordRow).join('') : '<li class="dict-empty">Không tìm thấy từ nào. Thử bỏ bớt bộ lọc hoặc thêm từ của riêng bạn.</li>';
+    const shown = list.slice(0, wf.limit);
+    const more = list.length - shown.length;
+    $('#words-count').textContent = more > 0 ? `Đang hiện ${shown.length} / ${list.length} từ` : `Đang hiện ${list.length} từ`;
+    $('#words-list').innerHTML = list.length
+      ? shown.map(wordRow).join('') + (more > 0 ? `<li class="dict-more"><button type="button" class="btn btn-ghost" data-action="more">Xem thêm ${Math.min(PAGE, more)} từ</button></li>` : '')
+      : '<li class="dict-empty">Không tìm thấy từ nào. Thử bỏ bớt bộ lọc hoặc thêm từ của riêng bạn.</li>';
   }
 
   function wordRow(w) {
@@ -1006,8 +1019,10 @@
     save();
     wf.adding = false;
     wf.topic = 'mine';
+    wf.level = 'all';
     wf.status = 'all';
     wf.q = '';
+    wf.limit = PAGE;
     RENDER.words();
     toast(`Đã thêm “${word}” vào Từ của tôi.`);
   }
@@ -1085,8 +1100,13 @@
       case 'delete':
         armOrFire('del:' + d.id, () => renderWordList(), () => deleteWord(d.id));
         break;
+      case 'more':
+        wf.limit += PAGE;
+        renderWordList();
+        break;
       case 'chip':
         wf.status = d.status;
+        wf.limit = PAGE;
         renderWordList();
         break;
       case 'reset':
@@ -1126,7 +1146,8 @@
         return;
       case 'quiz-topic': quizCfg.topic = t.value; return;
       case 'quiz-count': quizCfg.count = Number(t.value); return;
-      case 'words-topic': wf.topic = t.value; renderWordList(); return;
+      case 'words-topic': wf.topic = t.value; wf.limit = PAGE; renderWordList(); return;
+      case 'words-level': wf.level = t.value; wf.limit = PAGE; renderWordList(); return;
       case 'set-accent': data.settings.accent = t.value; save(); speech.say('Hello! This is how I sound.'); return;
       case 'set-new': data.settings.newPerDay = Number(t.value); save(); rerender(); return;
       case 'set-goal': data.settings.goal = Number(t.value); save(); rerender(); return;
@@ -1139,6 +1160,7 @@
     const t = e.target;
     if (t.id === 'words-q') {
       wf.q = t.value;
+      wf.limit = PAGE;
       renderWordList();
     } else if (t.id === 'set-rate') {
       data.settings.rate = Number(t.value);

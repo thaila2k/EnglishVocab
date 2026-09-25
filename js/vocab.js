@@ -1,0 +1,23 @@
+// Kho từ vựng. Mỗi file trong js/data/ gọi VOCAB.add(chủ đề, danh sách từ).
+// Mỗi từ: [word, pos, ipa, vi, example, exampleVi, level]
+// IPA theo giọng Anh-Mỹ. Level theo khung CEFR (A1 → C2).
+window.VOCAB = (function () {
+  const topics = [];
+  const words = [];
+  const seen = new Set();
+
+  function add(topic, rows) {
+    topics.push(topic);
+    for (const [word, pos, ipa, vi, ex, exVi, level] of rows) {
+      const id = word.replace(/\s+/g, '-');
+      if (seen.has(id)) {
+        console.warn('Từ bị trùng, đã bỏ qua:', word);
+        continue;
+      }
+      seen.add(id);
+      words.push({ id, word, pos, ipa, vi, ex, exVi, level, topic: topic.id });
+    }
+  }
+
+  return { topics, words, add };
+})();
